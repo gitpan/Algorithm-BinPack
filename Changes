@@ -1,4 +1,8 @@
 Revision history for Perl extension Algorithm::BinPack.
 
+0.2  Wed Sep  8 15:38:58 2004
+    - fudge factor
+    - natural sorting order
+
 0.1  Fri Sep  3 13:54:12 2004
 	- initial version
