@@ -1,10 +1,10 @@
-Algorithm-BinPack version 0.4
+Algorithm-BinPack version 0.5
 =============================
 
-Algorithm::BinPack packs items into bins in an efficient manner. It 
-attempts to minimize the amount of space remaining in each bin. An 
-example where this would be useful might be packing files onto CDs, 
-using as few as possible.
+"Algorithm::BinPack" efficiently packs items into bins. The bins are 
+given a maximum size, and items are packed in with as little empty 
+space as possible. An example use would be backing up files to CD, 
+while minimizing the number of discs required.
 
 
 INSTALLATION
@@ -19,8 +19,8 @@ To install this module type the following:
 
 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004 by Carey Tilden
+Copyright (C) 2004-05 by Carey Tilden
 
 This code is dual licensed. You may choose from one of the following:
-  - http://creativecommons.org/licenses/by/1.0/
+  - http://creativecommons.org/licenses/by/1.0
   - http://d.revinc.org/pages/license

@@ -1,6 +1,6 @@
 package Algorithm::BinPack;
 
-our $VERSION = 0.4;
+our $VERSION = 0.5;
 
 =head1 NAME
 
@@ -9,9 +9,9 @@ Algorithm::BinPack - efficiently pack items into bins
 =head1 SYNOPSIS
 
 C<Algorithm::BinPack> efficiently packs items into bins. The bins are 
-given a maximum size, and the items are packed in with as little empty 
-space as possible. An example use would be packing files onto CDs, and 
-you want to use as few CDs as possible.
+given a maximum size, and items are packed in with as little empty 
+space as possible. An example use would be backing up files to CD, 
+while minimizing the number of discs required. 
 
     my $bp = Algorithm::BinPack->new(binsize => 4);
 
@@ -40,9 +40,9 @@ use Carp;
 Creates a new C<Algorithm::BinPack> object. The maximum bin size is 
 specified as a named argument 'binsize', and is required. A fudge 
 factor may be specified as a named argument 'fudge'. If a fudge factor 
-is specified, any items' sizes will be rounded up to a number divisible 
-by the fudge factor. This can help keep items with similar sizes in 
-order by their labels.
+is specified, item sizes will be rounded up to a number divisible by 
+the fudge factor. This can help keep items with similar sizes in order 
+by their labels.
 
     my $bp = Algorithm::BinPack->new(binsize => 4);
     my $bp = Algorithm::BinPack->new(binsize => 100, fudge => 10);
@@ -63,10 +63,13 @@ sub new {
 =item add_item
 
 Adds an item to be packed into a bin. Required named arguments are 
-'label' and 'size', but any others can be specified, and will be saved.
+'label' and 'size', but any others can be specified, and will be saved. 
+An optional 'bin' argument can be used to manually put an item into the 
+specified bin.
 
-    $bp->add_item(label => 'one', size => 1);
-    $bp->add_item(label => 'two', size => 2, desc => 'The second numeral');
+    $bp->add_item(label => 'one',  size => 1);
+    $bp->add_item(label => 'two',  size => 2, desc => 'The second numeral');
+    $bp->add_item(label => 'zero', size => 3, bin => 0);
     $bp->add_item(qw(label three size 3));
     $bp->add_item(qw(label four size 4 random key));
 
@@ -78,63 +81,55 @@ sub add_item {
 
     checkargs($item, qw(label size)) or return;
 
-    if ($self->{fudge}) {
-        require POSIX;
+    if (exists $item->{bin}) {
+        my ($bins, $max_binsize) = @{$self}{qw(bins binsize)};
+        my ($bin, $size, $label) = @{$item}{qw(bin size label)};
 
-        my $fudge = $self->{fudge};
-        my $size  = $item->{size};
+        if ($size > $max_binsize) {
+            carp("'$label' too big to fit in a bin\n");
+            return 0;
+        }
 
-        $item->{fudgesize} = POSIX::ceil($size/$fudge)*$fudge;
+        if ($bin !~ /^\d+$/) {
+            carp("Bin number must be numeric: $bin\n");
+            return 0;
+        }
+
+        my $binsize = $bins->[$bin]{size} || 0;
+        if ($size + $binsize > $max_binsize) {
+            carp("'$label' too big to fit in a bin #$bin size: $binsize\n");
+            return 0;
+        }
+
+        push @{ $bins->[$bin]{items} }, $item;
+        $bins->[$bin]{size} += $size;
+
+        return 1;
+    } else {
+        if ($self->{fudge}) {
+            require POSIX;
+
+            my $fudge = $self->{fudge};
+            my $size  = $item->{size};
+
+            $item->{fudgesize} = POSIX::ceil($size/$fudge)*$fudge;
+        }
+
+        push @{ $self->{items} }, $item;
     }
-
-    push @{ $self->{items} }, $item;
 }
 
 =item prefill_bin
 
-Manually adds an item to the specified bin.  Required named arguments 
-are 'bin', 'label', and 'size', but any others can be specified, and 
-will be saved.
-
-    $bp->prefill_bin(bin => 0, label => 'one', size => 1);
-    $bp->prefill_bin(bin => 2, label => 'two', size => 2, desc => 'The second numeral');
-    $bp->prefill_bin(qw(bin 1 label three size 3));
-    $bp->prefill_bin(qw(bin 3 label four size 4 random key));
+(Deprecated method) C<add_item> now knows how to handle the 'bin' 
+argument directly, so this method is redundant.
 
 =cut
 
 sub prefill_bin {
     my $self = shift;
-    my $item = { @_ };
-
-    my $bins = $self->{bins};
-    my $binsize = $self->{binsize};
-    my $bin_num_size;
-
-    checkargs($item, qw(bin label size)) or return;
-
-    my ($bin_num, $size, $label) = @{$item}{qw(bin size label)};
-
-    if ($size > $binsize) {
-        carp("'$label' too big to fit in a bin\n");
-        return 0;
-    }
-
-    if ($bin_num !~ /^\d+$/) {
-        carp("Bin number must be numeric: $bin_num\n");
-        return 0;
-    }
-
-    $bin_num_size = $bins->[$bin_num]->{size} || 0;
-    if ($size + $bin_num_size > $binsize) {
-        carp("'$label' too big to fit in a bin #$bin_num size: $bin_num_size\n");
-        return 0;
-    }
-
-    push( @{ $bins->[$bin_num]->{items} }, $item );
-    $bins->[$bin_num]->{size} += $size;
-
-    return 1;
+    checkargs({ @_ }, qw(label size bin)) or return;
+    $self->add_item(@_);
 }
 
 =item pack_bins
@@ -224,10 +219,11 @@ Algorithm Design Manual' by Steven S. Skiena.
 This module is similar to L<Algorithm::Bucketizer>, but has a few key 
 differences. The algorithms in Algorithm::Bucketizer are based on 
 optimization by multiple iterations, so the module is set up 
-differently. The algorithm used in Algorithm::BinPack is predictable, 
-and does not require multiple iterations. I also figured it could use a 
-name that's more well-known (searching for variations on "bin packing" 
-finds more relevant results than variations on "bucketizer").
+differently. By contrast, the algorithm used in Algorithm::BinPack is 
+predictable, and does not require multiple iterations. The name also 
+reflects the well-known name of the problem. Searching for variations 
+on "bin packing" finds more relevant results than variations on 
+"bucketizer".
 
 =head1 AUTHOR
 
@@ -235,14 +231,24 @@ Carey Tilden E<lt>revdiablo@wd39.comE<gt>
 
 =head1 CONTRIBUTORS
 
-Andrew 'Terra' Gillespie E<lt>algorithm_binpack@Tech.FutureQuest.netE<gt> - prefill_bin method
+Andrew 'Terra' Gillespie E<lt>algorithm_binpack@Tech.FutureQuest.netE<gt> - C<prefill_bin>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004 by Carey Tilden
+Copyright (C) 2004-05 by Carey Tilden
 
 This code is dual licensed. You may choose from one of the following:
-  - http://creativecommons.org/licenses/by/1.0/
-  - http://d.revinc.org/pages/license
+
+=over 4
+
+=item http://creativecommons.org/licenses/by/1.0
+
+A Creative Commons license that allows free use, while requiring attribution.
+
+=item http://d.revinc.org/pages/license
+
+The I Really Could Care Less About You Public License.
+
+=back
 
 =cut
