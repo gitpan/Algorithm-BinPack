@@ -1,6 +1,6 @@
 package Algorithm::BinPack;
 
-our $VERSION = 0.3;
+our $VERSION = 0.4;
 
 =head1 NAME
 
@@ -55,6 +55,8 @@ sub new {
 
     checkargs($self, qw(binsize)) or return;
 
+    $self->{bins} = [];
+
     bless $self, $name;
 }
 
@@ -88,6 +90,53 @@ sub add_item {
     push @{ $self->{items} }, $item;
 }
 
+=item prefill_bin
+
+Manually adds an item to the specified bin.  Required named arguments 
+are 'bin', 'label', and 'size', but any others can be specified, and 
+will be saved.
+
+    $bp->prefill_bin(bin => 0, label => 'one', size => 1);
+    $bp->prefill_bin(bin => 2, label => 'two', size => 2, desc => 'The second numeral');
+    $bp->prefill_bin(qw(bin 1 label three size 3));
+    $bp->prefill_bin(qw(bin 3 label four size 4 random key));
+
+=cut
+
+sub prefill_bin {
+    my $self = shift;
+    my $item = { @_ };
+
+    my $bins = $self->{bins};
+    my $binsize = $self->{binsize};
+    my $bin_num_size;
+
+    checkargs($item, qw(bin label size)) or return;
+
+    my ($bin_num, $size, $label) = @{$item}{qw(bin size label)};
+
+    if ($size > $binsize) {
+        carp("'$label' too big to fit in a bin\n");
+        return 0;
+    }
+
+    if ($bin_num !~ /^\d+$/) {
+        carp("Bin number must be numeric: $bin_num\n");
+        return 0;
+    }
+
+    $bin_num_size = $bins->[$bin_num]->{size} || 0;
+    if ($size + $bin_num_size > $binsize) {
+        carp("'$label' too big to fit in a bin #$bin_num size: $bin_num_size\n");
+        return 0;
+    }
+
+    push( @{ $bins->[$bin_num]->{items} }, $item );
+    $bins->[$bin_num]->{size} += $size;
+
+    return 1;
+}
+
 =item pack_bins
 
 Packs the items into bins. This method tries to leave as little empty 
@@ -115,7 +164,7 @@ sub pack_bins {
 
     no warnings 'uninitialized';
 
-    my @bins;
+    my @bins = @{ $self->{bins} };
 
     for my $item (sort_items($self->{items})) {
         my ($size, $label) = @{$item}{qw(size label)};
@@ -183,6 +232,10 @@ finds more relevant results than variations on "bucketizer").
 =head1 AUTHOR
 
 Carey Tilden E<lt>revdiablo@wd39.comE<gt>
+
+=head1 CONTRIBUTORS
+
+Andrew 'Terra' Gillespie E<lt>algorithm_binpack@Tech.FutureQuest.netE<gt> - prefill_bin method
 
 =head1 COPYRIGHT AND LICENSE
 
