@@ -1,6 +1,6 @@
 package Algorithm::BinPack;
 
-our $VERSION = 0.2;
+our $VERSION = 0.3;
 
 =head1 NAME
 
@@ -53,7 +53,7 @@ sub new {
     my $name = shift;
     my $self = { @_ };
 
-    checkargs($self, qw(binsize));
+    checkargs($self, qw(binsize)) or return;
 
     bless $self, $name;
 }
@@ -74,7 +74,7 @@ sub add_item {
     my $self = shift;
     my $item = { @_ };
 
-    checkargs($item, qw(label size));
+    checkargs($item, qw(label size)) or return;
 
     if ($self->{fudge}) {
         require POSIX;
@@ -120,8 +120,10 @@ sub pack_bins {
     for my $item (sort_items($self->{items})) {
         my ($size, $label) = @{$item}{qw(size label)};
 
-        carp "'$label' too big to fit in a bin\n" and next
-            if $size > $binsize;
+        if ($size > $binsize) {
+            carp "'$label' too big to fit in a bin\n";
+            next;
+        }
 
         my $i = 0;
         $i++ until $bins[$i]{size} + $size <= $binsize;
@@ -134,11 +136,18 @@ sub pack_bins {
 }
 
 sub checkargs {
-    my ($self, @args) = @_;
+    my ($href, @args) = @_;
+
+    my $success = 1;
 
     for (@args) {
-        carp "Missing argument '$_'" unless $self->{$_};
+        unless (exists $href->{$_}) {
+            carp "Missing argument '$_'";
+            $success = 0;
+        }
     }
+
+    return $success;
 }
 
 sub sort_items {

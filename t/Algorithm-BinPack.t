@@ -35,4 +35,5 @@ $bp->add_item(size  => 5);
 
 # check for too-big items
 $SIG{__WARN__} = sub { like( $_[0], qr/too big/ ) };
+$bp->add_item(label => 'five', size  => 5);
 $bp->pack_bins;
