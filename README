@@ -1,0 +1,26 @@
+Algorithm-BinPack version 0.1
+=============================
+
+Algorithm::BinPack packs items into bins in an efficient manner. It 
+attempts to minimize the amount of space remaining in each bin. An 
+example where this would be useful might be packing files onto CDs, 
+using as few as possible.
+
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+
+COPYRIGHT AND LICENSE
+
+Copyright (C) 2004 by Carey Tilden
+
+This code is dual licensed. You may choose from one of the following:
+  - http://creativecommons.org/licenses/by/1.0/
+  - http://d.revinc.org/pages/license
